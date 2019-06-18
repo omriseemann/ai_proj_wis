@@ -37,7 +37,8 @@ class ScintImageGen(FunctionalGen):
         
         return I
 
-class dataset
+    def generateBatch(self, n):
+        pass
 
 
 if __name__ == "__main__":
