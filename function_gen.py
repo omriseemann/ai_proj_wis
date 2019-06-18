@@ -6,8 +6,7 @@ Created on Tue Jun 18 09:46:12 2019
 @author: omrisee
 """
 
-import torch
-import torch.nn as nn
+import torchvision as tv
 import numpy as np
 import matplotlib.pyplot as plt
 from captcha.image import ImageCaptcha
@@ -21,8 +20,17 @@ class FunctionalGen:
     def generateImage(self):
         raise Exception('Need to implement this function.')
     
-    def loss(self):
+    def loss(self,a,b):
         raise Exception('Need to implement this function.')
+    
+    def lossBatch(self,A,B):
+        L = np.array(np.zeros(len(A)))
+        i = 0
+        for a,b in zip(A,B):
+            l = self.loss(a,b)
+            L[i] = l
+            i += 1
+        return L
     
     def generateBatch(self,n):
         raise Exception('Need to implement this function.')
@@ -52,6 +60,8 @@ class CaptchaGen_OS_Fixed(FunctionalGen):
     def __init__(self, string_length=6):
         self.string_length = string_length
         self.generator = ImageCaptcha()
+        self.transforms = tv.transforms.Compose([
+                tv.transforms.ToTensor()])
         return
     
     def generateRandomString(self):
@@ -61,6 +71,7 @@ class CaptchaGen_OS_Fixed(FunctionalGen):
     def generateImage(self):
         s = self.generateRandomString()
         I = self.generator.generate_image(s)
+        I = self.transforms(I)
         return I, s
 
     def generateBatch(self, n):
@@ -73,7 +84,9 @@ class CaptchaGen_OS_Fixed(FunctionalGen):
     
 
 if __name__ == "__main__":
-    main = CaptchaGen_OS_Fixed()
+    main = CaptchaGen_OS_Fixed(6)
     data,s = main.generateImage()
-    plt.imshow(data)
+    tp = tv.transforms.ToPILImage()
+    im = tp(data)
+    plt.imshow(im)
     print(s)
