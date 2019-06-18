@@ -14,6 +14,7 @@ from captcha.image import ImageCaptcha
 # pip install captcha
 import random
 import string
+from difflib import SequenceMatcher
 
 
 class FunctionalGen:
@@ -46,7 +47,7 @@ class ScintImageGen(FunctionalGen):
         pass
 
 
-class CaptchaGen_OS(FunctionalGen):
+class CaptchaGen_OS_Fixed(FunctionalGen):
     
     def __init__(self, string_length=6):
         self.string_length = string_length
@@ -64,10 +65,15 @@ class CaptchaGen_OS(FunctionalGen):
 
     def generateBatch(self, n):
         pass
-
+    
+    def loss(self,s1,s2):
+        l = 1 - SequenceMatcher(None,s1,s2).ratio()
+        l  = l + abs(len(s1) - len(s2))
+        return l
+    
 
 if __name__ == "__main__":
-    main = CaptchaGen_OS()
+    main = CaptchaGen_OS_Fixed()
     data,s = main.generateImage()
     plt.imshow(data)
     print(s)
