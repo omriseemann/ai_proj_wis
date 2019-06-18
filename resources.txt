@@ -1,2 +1,3 @@
 https://www.kaggle.com/fournierp/captcha-version-2-images
 https://medium.com/@ageitgey/how-to-break-a-captcha-system-in-15-minutes-with-machine-learning-dbebb035a710
+https://www.zdnet.com/article/new-machine-learning-algorithm-breaks-text-captchas-easier-than-ever/
