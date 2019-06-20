@@ -9,6 +9,7 @@ Created on Thu Jun 20 08:15:14 2019
 import torch
 import function_gen
 import numpy as np
+import matplotlib.pyplot as plt
 
 
 class ModelNN(torch.nn.Module):
@@ -84,8 +85,14 @@ class Learner:
         down = np.log(self.lr_ratio)        
         f = lambda epoch: np.exp(down -down*(np.cos(epoch*np.pi / self.lr_period)**2))
         return f
+    
+    def plot(self):
+        f = plt.figure()
+        plt.plot(self.learning_results['loss'])
+        plt.plot(self.learning_results['error'])
 
 
 if __name__ == '__main__':
-    learner = Learner(function_gen.CaptchaGen_OS_Fixed,batch_size=10)
-    learner.learn(10000)
+    learner = Learner(function_gen.CaptchaGen_OS_Fixed,batch_size=20)
+    learner.learn(1000)
+    learner.plot()
