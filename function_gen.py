@@ -122,15 +122,16 @@ class CaptchaGen_OS_Fixed(FunctionalGen):
         res = np.zeros(self.string_length)
         for i,c in enumerate(s):
             res[i] = self.char_to_num[c]
-        return torch.tensor(res)
+        return torch.FloatTensor(res)
     
     def string_to_tensor(self,s):
         t = self.string_to_index_tensor(s)
         T = np.zeros([self.string_length, len(self.char_to_num)])
         for i,x in enumerate(t):
             x = int(x)
-            T[i,x] = 1
-        return torch.tensor(T, requires_grad=True)
+            T[i,x] = 1.
+        T = torch.FloatTensor(T)
+        return T
     
     def tensor_to_string(self,t):
         s = ''
@@ -144,6 +145,11 @@ class CaptchaGen_OS_Fixed(FunctionalGen):
         l = lossf(output,target.argmax(-1))
         return l
     
+    def error(self, output,target):
+        r = output.argmax(-1) == target.argmax(-1)
+        r = 1 - int(r.sum())/ len(r)
+        return torch.FloatTensor([r])
+    
 
 if __name__ == "__main__":
     main = CaptchaGen_OS_Fixed(6)
@@ -153,7 +159,10 @@ if __name__ == "__main__":
     im = tp(data)
     plt.imshow(im)
     print(s)
-    data,T = main.generateBatch(10)
-    print([main.tensor_to_string(T[i]) for i in range(10)])
+    data,T = main.generateBatch(5)
+    print([main.tensor_to_string(T[i]) for i in range(5)])
     print(data.shape)
     print(T.shape)
+    data,T2 = main.generateBatch(5)
+    print(main.lossBatch(T,T2))
+    print(main.errorBatch(T,T2))
