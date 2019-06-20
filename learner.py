@@ -55,7 +55,7 @@ class Learner:
         self.learning_results = {'loss': [], 'error': []}
         self.batch_size = batch_size
         self.lr_ratio = 1e-2
-        self.lr_period = 100
+        self.lr_period = 200
         self.lr_start = 1e-3
         self.reset()
         
@@ -73,10 +73,12 @@ class Learner:
             loss = self.functional_generator.lossBatch(output,target)
             loss.backward()
             self.optimizer.step()
+            #self.scheduler.step()
             self.learning_results['loss'].append(loss)
             error = self.functional_generator.errorBatch(output, target)
             self.learning_results['error'].append(error)
-            print(f'epoch: {i}, loss: {loss}, error: {error}')
+            lr = self.optimizer.param_groups[0]['lr']
+            print(f'epoch: {i}, loss: {loss:.3f}, error: {error:.3f}, LR:{lr:.3E}')
             
     def cyclyc_lr(self):
         down = np.log(self.lr_ratio)        
@@ -85,6 +87,5 @@ class Learner:
 
 
 if __name__ == '__main__':
-    learner = Learner(function_gen.CaptchaGen_OS_Fixed)
-    d, t = learner.functional_generator.generateBatch(1)
-    learner.learn(10)
+    learner = Learner(function_gen.CaptchaGen_OS_Fixed,batch_size=10)
+    learner.learn(10000)
