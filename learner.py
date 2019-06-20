@@ -36,7 +36,7 @@ class ModelNN(torch.nn.Module):
                 h = int(h//damping)
                 w = int(w//damping)
                 cnum = cnum2
-                if cnum<200:
+                if cnum<50:
                     cnum2 = cnum2*4
     def forward(self, x):
         for i in range(len(self.module_list)):
@@ -74,9 +74,9 @@ class Learner:
             loss.backward()
             self.optimizer.step()
             #self.scheduler.step()
-            self.learning_results['loss'].append(loss)
+            self.learning_results['loss'].append(loss.detach().numpy())
             error = self.functional_generator.errorBatch(output, target)
-            self.learning_results['error'].append(error)
+            self.learning_results['error'].append(error.numpy())
             lr = self.optimizer.param_groups[0]['lr']
             print(f'epoch: {i}, loss: {loss:.3f}, error: {error:.3f}, LR:{lr:.3E}')
             
