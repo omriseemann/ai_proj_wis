@@ -14,41 +14,55 @@ from captcha.image import ImageCaptcha
 # pip install captcha
 import random
 import string
-from difflib import SequenceMatcher
+#from difflib import SequenceMatcher
 
 
 class FunctionalGen:
     # general interface to work with the learner class
+    size_outputs = [1] # dim size of the output tensor
     def generateImage(self):
         # generates an Image as a tensor, returns target as well, must be
         # implemented
         raise Exception('Need to implement this function.')
     
     def loss(self,a,b):
-        # loss function, must be implemented
+        # loss function, must be implemented, returns tensor
         raise Exception('Need to implement this function.')
+        
+    def error(self,a,b):
+        # loss function, must be implemented, returns tensor
+        raise Exception('Need to implement this function.')
+        
+    def errorBatch(self,A,B):
+        # created a tensor of errors based on two baches of targets
+        L = []
+        for a,b in zip(A,B):
+            l = self.error(a,b)
+            l = l.unsqueeze(0)
+            L.append(l)
+        return torch.cat(L).mean()
     
     def lossBatch(self,A,B):
-        # created a tensor of losses based on two lists of targets
-        L = np.array(np.zeros(len(A)))
-        i = 0
+        # created a tensor of losses based on two baches of targets
+        L = []
         for a,b in zip(A,B):
             l = self.loss(a,b)
-            L[i] = l
-            i += 1
-        return L
+            l = l.unsqueeze(0)
+            L.append(l)
+        return torch.cat(L).mean()
     
     def generateBatch(self,n):
         # generate batch of images and a list of targets
         # batch index is first
-        S = []
+        T = []
         data = []
         for i in range(n):
-            d,s = self.generateImage()
+            d,t = self.generateImage()
             data.append(d.unsqueeze(0))
-            S.append(s)
+            T.append(t.unsqueeze(0))
         data = torch.cat(data)
-        return data, S
+        T = torch.cat(T)
+        return data, T
 
 
 class ScintImageGen(FunctionalGen):
@@ -70,35 +84,76 @@ class ScintImageGen(FunctionalGen):
 
 class CaptchaGen_OS_Fixed(FunctionalGen):
     # generator of captcha with fixed length
+    char_to_num = {}
+    num_to_char = {}
+    letters = string.ascii_letters
+    for i,c in enumerate(letters):
+        char_to_num[c] = i 
+        num_to_char[i] = c
+    
     def __init__(self, string_length=6):
         self.string_length = string_length
         self.generator = ImageCaptcha()
         self.transforms = torchvision.transforms.Compose([
                 torchvision.transforms.ToTensor()])
+        self.size_outputs = [string_length, len(self.letters)]
         return
     
-    def generateRandomString(self):
-        letters = string.ascii_lowercase
-        return ''.join(random.choice(letters) for i in range(self.string_length))
+    def generateRandomString(self, pspace=0):
+        s = ''
+        n = len(self.letters)
+        for i in range(self.string_length):
+            k = random.randint(0,n-1)
+            r = random.random()
+            if r<pspace:
+                s += ' '
+            else:
+                s += self.num_to_char[k]
+        return s
     
     def generateImage(self):
         s = self.generateRandomString()
         I = self.generator.generate_image(s)
         I = self.transforms(I)
-        return I, s
+        t = self.string_to_tensor(s)
+        return I, t
     
-    def loss(self,s1,s2):
-        l = 1 - SequenceMatcher(None,s1,s2).ratio()
-        l  = l + abs(len(s1) - len(s2))
+    def string_to_index_tensor(self,s):
+        res = np.zeros(self.string_length)
+        for i,c in enumerate(s):
+            res[i] = self.char_to_num[c]
+        return torch.tensor(res)
+    
+    def string_to_tensor(self,s):
+        t = self.string_to_index_tensor(s)
+        T = np.zeros([self.string_length, len(self.char_to_num)])
+        for i,x in enumerate(t):
+            x = int(x)
+            T[i,x] = 1
+        return torch.tensor(T, requires_grad=True)
+    
+    def tensor_to_string(self,t):
+        s = ''
+        for x in t.argmax(1):
+            c = self.num_to_char[int(x)]
+            s += c
+        return s
+    
+    def loss(self,output,target):
+        lossf = torch.nn.CrossEntropyLoss()
+        l = lossf(output,target.argmax(-1))
         return l
     
 
 if __name__ == "__main__":
     main = CaptchaGen_OS_Fixed(6)
-    data,s = main.generateImage()
+    data,t = main.generateImage()
+    s = main.tensor_to_string(t)
     tp = torchvision.transforms.ToPILImage()
     im = tp(data)
     plt.imshow(im)
     print(s)
-    data,s = main.generateBatch(10)
-    print(s)
+    data,T = main.generateBatch(10)
+    print([main.tensor_to_string(T[i]) for i in range(10)])
+    print(data.shape)
+    print(T.shape)
