@@ -107,10 +107,8 @@ class Learner:
                 'data_params' : self.data_params,
                 'save_params' : self.save_params
                 }
-        try:
-            os.mkdir(save_dir)
-        except FileExistsError:
-            pass
+        if not os.path.exists(save_dir):
+            os.makedirs(save_dir)
         spath = os.path.join(save_dir,name)
         spath = os.path.realpath(spath)
         torch.save(data,spath)
