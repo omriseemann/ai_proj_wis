@@ -63,6 +63,12 @@ class FunctionalGen:
         data = torch.cat(data)
         T = torch.cat(T)
         return data, T
+    
+    def plot_examples(self, input_, target, output):
+        # plot function for the generator, input_ is the data input, 
+        # target is real target, output is model output. Gets batched examples
+        raise Exception('Need to implement this function.')
+        
 
 
 class ScintImageGen(FunctionalGen):
@@ -149,6 +155,23 @@ class CaptchaGen_OS_Fixed(FunctionalGen):
         r = output.argmax(-1) == target.argmax(-1)
         r = 1 - int(r.sum())/ len(r)
         return torch.FloatTensor([r])
+    
+    def plot_examples(self, input_, target, output):
+        # todo add varieing number of examples
+        n = target.shape[0]
+        plt.figure()
+        tp = torchvision.transforms.ToPILImage()
+        for i in range(n):
+            plt.subplot(3,3,i+1)
+            I = input_[i]
+            t = target[i]
+            o= output[i]
+            plt.imshow(tp(I))
+            st = self.tensor_to_string(t)
+            so = self.tensor_to_string(o)
+            plt.title(f'{st} / {so}')
+            
+        
     
 
 if __name__ == "__main__":

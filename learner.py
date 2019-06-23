@@ -65,8 +65,16 @@ class Learner:
             self.model = ModelNN(self.data_params['input_shape'], self.data_params['output_shape'])
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.lr_params['lr_start'])
         self.scheduler = torch.optim.lr_scheduler.LambdaLR(self.optimizer, self.cyclyc_lr())      
+        
+    def plot_examples(self, n_examples=9):
+        data,target = self.functional_generator.generateBatch(n_examples)
+        output = self.model(data)
+        self.functional_generator.plot_examples(data,target,output)
+        
     
-    def learn(self, n_batches=100):
+    def learn(self, n_batches=100, save_period=None):
+        # optimize the model for n_batches number of batches, save it every
+        # save_period number of batches.
         self.model.train()
         for i in range(n_batches):
             self.optimizer.zero_grad()
@@ -81,6 +89,9 @@ class Learner:
             self.learning_results['error'].append(error.numpy())
             lr = self.optimizer.param_groups[0]['lr']
             print(f'epoch: {i}, loss: {loss:.3f}, error: {error:.3f}, LR:{lr:.3E}')
+            if not save_period is None:
+                if i % save_period ==0 :
+                    self.save()
         self.model.eval()
             
     def cyclyc_lr(self):
@@ -89,9 +100,11 @@ class Learner:
         return f
     
     def plot(self, fnum=1):
-        f = plt.figure(fnum)
+        plt.figure(fnum)
         plt.plot(self.learning_results['loss'])
         plt.plot(self.learning_results['error'])
+        plt.yscale('log')
+        plt.grid(True)
     
     def save(self):
         name = self.save_params['name']+'.pt'
@@ -131,7 +144,10 @@ class Learner:
 
 if __name__ == '__main__':
     learner = Learner(function_gen.CaptchaGen_OS_Fixed,batch_size=50)
-    for i in range(5):
-        learner.learn(1000)
-        learner.save()
-        learner.plot()
+    learner.save_params['name'] = 'try1'
+    learner.load()
+    learner.plot()
+    learner.data_params['batch_size'] =  100
+    learner.learn(500)
+    learner.save()
+    learner.plot()
