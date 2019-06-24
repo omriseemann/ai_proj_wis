@@ -7,9 +7,10 @@ Created on Thu Jun 20 08:15:14 2019
 """
 
 import torch
-import function_gen
+import capcha_gen
 import numpy as np
-
+import matplotlib.pyplot as plt
+import os
 
 class ModelNN(torch.nn.Module):
     
@@ -36,7 +37,7 @@ class ModelNN(torch.nn.Module):
                 h = int(h//damping)
                 w = int(w//damping)
                 cnum = cnum2
-                if cnum<200:
+                if cnum<50:
                     cnum2 = cnum2*4
     def forward(self, x):
         for i in range(len(self.module_list)):
@@ -50,42 +51,103 @@ class Learner:
     def __init__(self, func_gen, batch_size = 50):
         self.functional_generator = func_gen()
         _input, _output = self.functional_generator.generateImage()
-        self.input_shape = _input.shape
-        self.output_shape = _output.shape
+        self.data_params = {}
+        self.data_params['input_shape'] = _input.shape
+        self.data_params['output_shape'] = _output.shape
+        self.data_params['batch_size'] = batch_size
         self.learning_results = {'loss': [], 'error': []}
-        self.batch_size = batch_size
-        self.lr_ratio = 1e-2
-        self.lr_period = 200
-        self.lr_start = 1e-3
+        self.lr_params = {'lr_ratio' : 1e-2, 'lr_period' : 200000, 'lr_start': 1e-3}
+        self.save_params = {'save_dir' : './saved_data', 'name': 'test'}
         self.reset()
         
     def reset(self, flag_model = True):
         if flag_model:
-            self.model = ModelNN(self.input_shape, self.output_shape)
-        self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.lr_start)
+            self.model = ModelNN(self.data_params['input_shape'], self.data_params['output_shape'])
+        self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.lr_params['lr_start'])
         self.scheduler = torch.optim.lr_scheduler.LambdaLR(self.optimizer, self.cyclyc_lr())      
+        
+    def plot_examples(self, n_examples=9):
+        data,target = self.functional_generator.generateBatch(n_examples)
+        output = self.model(data)
+        self.functional_generator.plot_examples(data,target,output)
+        
     
-    def learn(self, n_batches=100):
+    def learn(self, n_batches=100, save_period=None):
+        # optimize the model for n_batches number of batches, save it every
+        # save_period number of batches.
+        self.model.train()
         for i in range(n_batches):
             self.optimizer.zero_grad()
-            batched_input, target = self.functional_generator.generateBatch(self.batch_size)
+            batched_input, target = self.functional_generator.generateBatch(self.data_params['batch_size'])
             output = self.model(batched_input)
             loss = self.functional_generator.lossBatch(output,target)
             loss.backward()
             self.optimizer.step()
-            #self.scheduler.step()
-            self.learning_results['loss'].append(loss)
+            self.scheduler.step()
+            self.learning_results['loss'].append(loss.detach().numpy())
             error = self.functional_generator.errorBatch(output, target)
-            self.learning_results['error'].append(error)
+            self.learning_results['error'].append(error.numpy())
             lr = self.optimizer.param_groups[0]['lr']
             print(f'epoch: {i}, loss: {loss:.3f}, error: {error:.3f}, LR:{lr:.3E}')
+            if not save_period is None:
+                if i % save_period == 0 :
+                    self.save()
+        self.model.eval()
             
     def cyclyc_lr(self):
-        down = np.log(self.lr_ratio)        
-        f = lambda epoch: np.exp(down -down*(np.cos(epoch*np.pi / self.lr_period)**2))
+        down = np.log(self.lr_params['lr_ratio'])        
+        f = lambda epoch: np.exp(down -down*(np.cos(epoch*np.pi / self.lr_params['lr_period'])**2))
         return f
+    
+    def plot(self, fnum=1):
+        plt.figure(fnum)
+        plt.plot(self.learning_results['loss'])
+        plt.plot(self.learning_results['error'])
+        plt.yscale('log')
+        plt.grid(True)
+    
+    def save(self):
+        name = self.save_params['name']+'.pt'
+        save_dir = self.save_params['save_dir']
+        optimizer_state = self.optimizer.state_dict()
+        scheduler_state = self.scheduler.state_dict()
+        model_state = self.model.state_dict()
+        data = {'learning_results' : self.learning_results,
+                'model_state' : model_state,
+                'optimizer_state' : optimizer_state,
+                'scheduler_state' : scheduler_state,
+                'lr_params' : self.lr_params,
+                'data_params' : self.data_params,
+                'save_params' : self.save_params
+                }
+        if not os.path.exists(save_dir):
+            os.makedirs(save_dir)
+        spath = os.path.join(save_dir,name)
+        spath = os.path.realpath(spath)
+        torch.save(data,spath)
+    
+    def load(self,lpath = None):
+        if lpath is None:
+            name = self.save_params['name']+'.pt'
+            save_dir = self.save_params['save_dir']
+            lpath = os.path.join(save_dir,name)
+            lpath = os.path.realpath(lpath)
+        data = torch.load(lpath)
+        self.learning_results = data['learning_results']
+        self.save_params = data['save_params']
+        self.data_params = data['data_params']
+        self.lr_params = data['lr_params']
+        self.model.load_state_dict(data['model_state'])
+        self.optimizer.load_state_dict(data['optimizer_state'])
+        self.scheduler.load_state_dict(data['scheduler_state'])
 
 
 if __name__ == '__main__':
-    learner = Learner(function_gen.CaptchaGen_OS_Fixed,batch_size=10)
-    learner.learn(10000)
+    learner = Learner(capcha_gen.CaptchaGen_OS_Fixed,batch_size=50)
+    learner.save_params['name'] = 'try1'
+    learner.load()
+    learner.plot()
+    learner.data_params['batch_size'] =  50
+    learner.learn(500)
+    #learner.save()
+    learner.plot()

@@ -15,74 +15,10 @@ from captcha.image import ImageCaptcha
 import random
 import string
 #from difflib import SequenceMatcher
+from functional_gen import FunctionalGenerator
 
 
-class FunctionalGen:
-    # general interface to work with the learner class
-    size_outputs = [1] # dim size of the output tensor
-    def generateImage(self):
-        # generates an Image as a tensor, returns target as well, must be
-        # implemented
-        raise Exception('Need to implement this function.')
-    
-    def loss(self,a,b):
-        # loss function, must be implemented, returns tensor
-        raise Exception('Need to implement this function.')
-        
-    def error(self,a,b):
-        # loss function, must be implemented, returns tensor
-        raise Exception('Need to implement this function.')
-        
-    def errorBatch(self,A,B):
-        # created a tensor of errors based on two baches of targets
-        L = []
-        for a,b in zip(A,B):
-            l = self.error(a,b)
-            l = l.unsqueeze(0)
-            L.append(l)
-        return torch.cat(L).mean()
-    
-    def lossBatch(self,A,B):
-        # created a tensor of losses based on two baches of targets
-        L = []
-        for a,b in zip(A,B):
-            l = self.loss(a,b)
-            l = l.unsqueeze(0)
-            L.append(l)
-        return torch.cat(L).mean()
-    
-    def generateBatch(self,n):
-        # generate batch of images and a list of targets
-        # batch index is first
-        T = []
-        data = []
-        for i in range(n):
-            d,t = self.generateImage()
-            data.append(d.unsqueeze(0))
-            T.append(t.unsqueeze(0))
-        data = torch.cat(data)
-        T = torch.cat(T)
-        return data, T
-
-
-class ScintImageGen(FunctionalGen):
-    
-    def __init__(self, nx=2048,ny=2048,bits=16,rbright=50, noise_level=200):
-        self.nx = nx
-        self.ny = ny
-        self.noise_level = noise_level
-        self.bits = bits
-        self.rbright = rbright
-        return
-    
-    def generateImage(self):
-        xm,ym = np.meshgrid(range(self.nx), range(self.ny))
-        I = np.round(np.random.rand(self.nx,self.ny)*self.noise_level)
-        return I
-            
-
-
-class CaptchaGen_OS_Fixed(FunctionalGen):
+class CaptchaGen_OS_Fixed(FunctionalGenerator):
     # generator of captcha with fixed length
     char_to_num = {}
     num_to_char = {}
@@ -149,6 +85,23 @@ class CaptchaGen_OS_Fixed(FunctionalGen):
         r = output.argmax(-1) == target.argmax(-1)
         r = 1 - int(r.sum())/ len(r)
         return torch.FloatTensor([r])
+    
+    def plot_examples(self, input_, target, output):
+        # todo add varieing number of examples
+        n = target.shape[0]
+        plt.figure()
+        tp = torchvision.transforms.ToPILImage()
+        for i in range(n):
+            plt.subplot(3,3,i+1)
+            I = input_[i]
+            t = target[i]
+            o= output[i]
+            plt.imshow(tp(I))
+            st = self.tensor_to_string(t)
+            so = self.tensor_to_string(o)
+            plt.title(f'{st} / {so}')
+            
+        
     
 
 if __name__ == "__main__":
