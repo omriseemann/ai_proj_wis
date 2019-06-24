@@ -90,7 +90,7 @@ class Learner:
             lr = self.optimizer.param_groups[0]['lr']
             print(f'epoch: {i}, loss: {loss:.3f}, error: {error:.3f}, LR:{lr:.3E}')
             if not save_period is None:
-                if i % save_period ==0 :
+                if i % save_period == 0 :
                     self.save()
         self.model.eval()
             
@@ -147,7 +147,7 @@ if __name__ == '__main__':
     learner.save_params['name'] = 'try1'
     learner.load()
     learner.plot()
-    learner.data_params['batch_size'] =  100
+    learner.data_params['batch_size'] =  200
     learner.learn(500)
     learner.save()
     learner.plot()
