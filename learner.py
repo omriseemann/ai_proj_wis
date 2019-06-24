@@ -7,7 +7,7 @@ Created on Thu Jun 20 08:15:14 2019
 """
 
 import torch
-import function_gen
+import capcha_gen
 import numpy as np
 import matplotlib.pyplot as plt
 import os
@@ -143,11 +143,11 @@ class Learner:
 
 
 if __name__ == '__main__':
-    learner = Learner(function_gen.CaptchaGen_OS_Fixed,batch_size=50)
+    learner = Learner(capcha_gen.CaptchaGen_OS_Fixed,batch_size=50)
     learner.save_params['name'] = 'try1'
     learner.load()
     learner.plot()
-    learner.data_params['batch_size'] =  200
+    learner.data_params['batch_size'] =  50
     learner.learn(500)
-    learner.save()
+    #learner.save()
     learner.plot()
