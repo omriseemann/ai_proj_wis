@@ -49,7 +49,7 @@ class ModelNN(torch.nn.Module):
 class Learner:
     
     def __init__(self, func_gen, batch_size = 50):
-        self.functional_generator = func_gen()
+        self.functional_generator = func_gen
         _input, _output = self.functional_generator.generateImage()
         self.data_params = {}
         self.data_params['input_shape'] = _input.shape
@@ -143,7 +143,7 @@ class Learner:
 
 
 if __name__ == '__main__':
-    learner = Learner(capcha_gen.CaptchaGen_OS_Fixed,batch_size=50)
+    learner = Learner(capcha_gen.CaptchaGen_OS_Fixed(),batch_size=50)
     learner.save_params['name'] = 'try1'
     learner.load()
     learner.plot()
