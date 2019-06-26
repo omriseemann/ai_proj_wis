@@ -15,8 +15,8 @@ class FunctionalGenerator:
     def generateImage(self):
         ''' generates an Image as a tensor, returns target as well, must be
         implemented
-        Image is tensor of type C1*W*H
-        target is tensor of type C2*W2*H2
+        Image is tensor of type C1*H*W
+        target is tensor of type C2*H2*W2
         '''
         Image = None
         Target = None
@@ -37,9 +37,9 @@ class FunctionalGenerator:
         '''creates a tensor of errors based on two baches of targets'''
         L = []
         for a, b in zip(A, B):
-            loss = self.error(a, b)
-            loss = loss.unsqueeze(0)
-            L.append(loss)
+            error = self.error(a, b)
+            error = error.unsqueeze(0)
+            L.append(error)
         return torch.cat(L).mean()
 
     def lossBatch(self, A, B):
@@ -72,4 +72,5 @@ class FunctionalGenerator:
 
 
 if __name__ == "__main__":
-    pass  # for testing
+    # testing function
+    pass
