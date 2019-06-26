@@ -12,6 +12,10 @@ import torch
 
 class FunctionalGenerator:
     '''general interface to work with the learner classes'''
+    def __init__(self):
+        self.input_shape = None
+        self.output_shape = None
+
     def generateImage(self):
         ''' generates an Image as a tensor, returns target as well, must be
         implemented
@@ -20,18 +24,18 @@ class FunctionalGenerator:
         '''
         Image = None
         Target = None
-        raise Exception('Need to implement this function.')
+        raise NotImplementedError
         return Image, Target
 
     def loss(self, a, b):
         '''loss function, must be implemented, returns valid pytorch loss class
         This can be achived using torch.nn.functional'''
-        raise Exception('Need to implement this function.')
+        raise NotImplementedError
 
     def error(self, a, b):
         '''error function for self analysis, must be implemented, returns
         tensor'''
-        raise Exception('Need to implement this function.')
+        raise NotImplementedError
 
     def errorBatch(self, A, B):
         '''creates a tensor of errors based on two baches of targets'''
@@ -68,9 +72,26 @@ class FunctionalGenerator:
         '''plot function for the generator, input_ is the data input,
         target is real target, output is model output. Gets batch of examples
         '''
-        raise Exception('Need to implement this function.')
+        raise NotImplementedError
+
+    def generateNewDataset(self, size=100, flag_verbose=False):
+        '''generates new datasets for the wrapper'''
+        data, T = [], []
+        for i in range(size):
+            d, t = self.generateImage()
+            data.append(d.unsqueeze(0))
+            T.append(t.unsqueeze(0))
+            if flag_verbose:
+                print(f'{i+1} / {size}')
+        data = torch.cat(data)
+        T = torch.cat(T)
+        dataset = torch.utils.data.dataset.TensorDataset(
+                data, T)
+        return dataset
 
 
 if __name__ == "__main__":
     # testing function
-    pass
+    from capcha_gen import CaptchaGenOSFixed
+    main = CaptchaGenOSFixed(6, flag_verbose=True)
+    db = main.generateNewDataset()

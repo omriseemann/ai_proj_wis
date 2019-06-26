@@ -16,7 +16,7 @@ import string
 from functional_gen import FunctionalGenerator
 
 
-class CaptchaGen_OS_Fixed(FunctionalGenerator):
+class CaptchaGenOSFixed(FunctionalGenerator):
     '''generator of captcha with fixed string length'''
     char_to_num = {}
     num_to_char = {}
@@ -27,11 +27,14 @@ class CaptchaGen_OS_Fixed(FunctionalGenerator):
 
     def __init__(self, string_length=6):
         '''string_length is the length of the capcha'''
+        super(CaptchaGenOSFixed, self).__init__()
         self.string_length = string_length
         self.generator = ImageCaptcha()
         self.transforms = torchvision.transforms.Compose([
                 torchvision.transforms.ToTensor()])
-        self.size_outputs = [string_length, len(self.letters)]
+        image, t = self.generateImage()
+        self.input_shape = image.shape
+        self.output_shape = t.shape
         return
 
     def generateRandomString(self, pspace=0):
@@ -115,7 +118,7 @@ class CaptchaGen_OS_Fixed(FunctionalGenerator):
 
 if __name__ == "__main__":
     # testing function
-    main = CaptchaGen_OS_Fixed(6)
+    main = CaptchaGenOSFixed(6)
     data, t = main.generateImage()
     s = main.tensor_to_string(t)
     tp = torchvision.transforms.ToPILImage()
