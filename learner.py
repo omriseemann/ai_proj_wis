@@ -118,8 +118,42 @@ class LearnerDatasetGenerative(Learner):
         self.log.append(f'Generated datasets of size ({train_size}, ' +
                         f'{valid_size}).')
 
-    def learn(self, batch_size=10, save_period=None):
-        pass
+    def learn(self, n_epochs=1, batch_size=10, save_period=None):
+        '''optimize the model for number of epochs with spacified batch size'''
+        self.log.append(f'training {n_epochs} epochs with batch size' +
+                        f'{batch_size}')
+        train_dl = torch.utils.data.DataLoader(self.datasets['train'],
+                                               batch_size=batch_size,
+                                               shuffle=True)
+        valid_dl = torch.utils.data.DataLoader(self.datasets['valid'])
+        for i in range(n_epochs):
+            self.model.train()
+            j = 0
+            tloss = []
+            for batched_input, target in train_dl:
+                self.optimizer.zero_grad()
+                output = self.model(batched_input)
+                loss = self.functional_generator.lossBatch(output, target)
+                loss.backward()
+                self.optimizer.step()
+                self.scheduler.step()
+                tloss.append(loss.detach().numpy())
+                error = self.functional_generator.errorBatch(output, target)
+                lr = self.optimizer.param_groups[0]['lr']
+                print(f'epoch,batch: {i},{j}, loss: {loss:.3f}, ' +
+                      f'error: {error:.3f}, LR:{lr:.3E}')
+                j += 1
+            self.model.eval()
+            vloss = []
+            verror = []
+            for batched_input, target in valid_dl:
+                loss = self.functional_generator.lossBatch(output, target)
+                error = self.functional_generator.errorBatch(output, target)
+                vloss.append(loss.detach().numpy())
+                verror.append(error.detach().numpy())
+            self.learning_results['error'].append(np.array(verror).mean())
+            self.learning_results['train_loss'].append(np.array(tloss).mean())
+            self.learning_results['valid_loss'].append(np.array(vloss).mean())
 
     def plot(self, fnum=1):
         plt.figure(fnum)
@@ -151,9 +185,8 @@ class LearnerGenerative(Learner):
                                                 lr_start, lr_ratio, lr_period)
         self.learning_results = {'loss': [], 'error': []}
 
-    def learn(self, n_batches=100, batch_size=10, save_period=None):
-        '''optimize the model for n_batches number of batches, save it every
-        save_period number of batches.'''
+    def learn(self, n_batches=100, batch_size=10):
+        '''optimize the model for n_batches number of batches'''
         self.model.train()
         self.log.append(f'training {n_batches} batches of size {batch_size}')
         for i in range(n_batches):
@@ -169,19 +202,9 @@ class LearnerGenerative(Learner):
             error = self.functional_generator.errorBatch(output, target)
             self.learning_results['error'].append(error.detach().numpy())
             lr = self.optimizer.param_groups[0]['lr']
-            print(f'epoch: {i}, loss: {loss:.3f}, error: {error:.3f}, ' +
+            print(f'batch: {i}, loss: {loss:.3f}, error: {error:.3f}, ' +
                   f'LR:{lr:.3E}')
-            if save_period is not None:
-                if (i+1) % save_period == 0:
-                    self.log.append(f'completed {i+1} / {n_batches} batches.')
-                    self.model.eval()
-                    self.save()
-                    self.model.train()
         self.model.eval()
-        if save_period is not None:
-            if (i+1) % save_period != 0:
-                self.log.append(f'completed {i+1} / {n_batches} batches.')
-                self.save()
 
     def plot(self, fnum=1):
         plt.figure(fnum)
