@@ -192,8 +192,8 @@ class Learner:
 if __name__ == '__main__':
     learner = Learner(capcha_gen.CaptchaGen_OS_Fixed(), batch_size=50)
     learner.save_params['name'] = 'try_after_arch'
-    learner.load()
-    learner.data_params['batch_size'] = 100
-    learner.learn(1000)
+    #learner.load()
+    learner.data_params['batch_size'] = 10
+    learner.learn(3000)
     learner.save()
     learner.plot()

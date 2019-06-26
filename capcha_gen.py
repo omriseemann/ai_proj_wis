@@ -93,7 +93,7 @@ class CaptchaGen_OS_Fixed(FunctionalGenerator):
     def error(self, output, target):
         '''implimantation of FunctionalGenerator, check it for detail'''
         r = output.argmax(0) == target.argmax(0)
-        r = 1 - r.sum() / r.shape[1]
+        r = 1 - float(r.sum()) / r.shape[1]
         return torch.FloatTensor([r])
 
     def plot_examples(self, input_, target, output):
