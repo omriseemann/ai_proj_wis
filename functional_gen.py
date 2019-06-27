@@ -27,30 +27,30 @@ class FunctionalGenerator:
         raise NotImplementedError
         return Image, Target
 
-    def loss(self, a, b):
+    def loss(self, output, target):
         '''loss function, must be implemented, returns valid pytorch loss class
         This can be achived using torch.nn.functional'''
         raise NotImplementedError
 
-    def error(self, a, b):
+    def error(self, output, target):
         '''error function for self analysis, must be implemented, returns
         tensor'''
         raise NotImplementedError
 
-    def errorBatch(self, A, B):
+    def errorBatch(self, output, target):
         '''creates a tensor of errors based on two baches of targets'''
         L = []
-        for a, b in zip(A, B):
-            error = self.error(a, b)
+        for o, t in zip(output, target):
+            error = self.error(o, t)
             error = error.unsqueeze(0)
             L.append(error)
         return torch.cat(L).mean()
 
-    def lossBatch(self, A, B):
+    def lossBatch(self, output, target):
         '''creates a tensor of losses based on two batches of targets'''
         L = []
-        for a, b in zip(A, B):
-            loss = self.loss(a, b)
+        for o, t in zip(output, target):
+            loss = self.loss(o, t)
             loss = loss.unsqueeze(0)
             L.append(loss)
         return torch.cat(L).mean()

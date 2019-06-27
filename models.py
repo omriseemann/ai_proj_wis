@@ -7,6 +7,7 @@ Created on Thu Jun 20 08:15:14 2019
 """
 
 import torch
+import numpy as np
 
 
 class ModelCNN(torch.nn.Module):
@@ -38,7 +39,7 @@ class ModelCNN(torch.nn.Module):
         ''' get the input and output shape tensors and sets achitecture dict
         of lists to help build the model.'''
         flag_end = False
-        shape_multiplyer = 2
+        shape_multiplyer = max(np.round(np.log10(input_shape)))
         c, h, w = input_shape[0], input_shape[1], input_shape[2]
         c2, h2, w2 = output_shape[0], output_shape[1], output_shape[2]
         cl, hl, wl = [], [], []
@@ -49,25 +50,25 @@ class ModelCNN(torch.nn.Module):
         c_before_compress = 200
         while not flag_end:
             if not flag_compress:
-                cm = max(c_before_compress, c2 * shape_multiplyer**2)
-                if cl[-1]*shape_multiplyer**2 < cm:
-                    cl.append(round(cl[-1]*shape_multiplyer**2))
+                cm = max(c_before_compress, c2 * shape_multiplyer)
+                if cl[-1]*shape_multiplyer < cm:
+                    cl.append(int(cl[-1]*shape_multiplyer))
                 else:
-                    cl.append(round(cm))
+                    cl.append(int(cm))
                     flag_compress = True
             else:
-                if not cl[-1]//shape_multiplyer**2 < c2:
-                    cl.append(cl[-1]//shape_multiplyer**2)
+                if not cl[-1]//shape_multiplyer < c2:
+                    cl.append(int(cl[-1]//shape_multiplyer))
                 else:
-                    cl.append(c2)
+                    cl.append(int(c2))
             if hl[-1]//shape_multiplyer > h2:
-                hl.append(hl[-1]//shape_multiplyer)
+                hl.append(int(hl[-1]//shape_multiplyer))
             else:
-                hl.append(h2)
+                hl.append(int(h2))
             if wl[-1]//shape_multiplyer > w2:
-                wl.append(wl[-1]//shape_multiplyer)
+                wl.append(int(wl[-1]//shape_multiplyer))
             else:
-                wl.append(w2)
+                wl.append(int(w2))
             if cl[-2] == c2 and wl[-2] == w2 and hl[-2] == h2:
                 flag_end = True
         self.architecture = {'C': cl, 'H': hl, 'W': wl}

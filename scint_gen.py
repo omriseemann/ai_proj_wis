@@ -92,16 +92,15 @@ class ScintImageGen(FunctionalGenerator):
     def loss(self, output, target):
         '''loss function, must be implemented, returns valid pytorch loss class
         This can be achived using torch.nn.functional'''
-        loss = (target-output) / target
-        loss = loss.abs().mean()
+        lossf = torch.nn.L1Loss()
+        loss = lossf(output, target)
         return loss
 
     def error(self, output, target):
-        return self.loss(output, target)
+        loss = (target-output) / target
+        return loss.abs().mean()
 
 
 if __name__ == "__main__":
     main = ScintImageGen()
-    I,t = main.generateBatch(50)
-    
-    
+    I, t = main.generateBatch(50)
