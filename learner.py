@@ -139,9 +139,6 @@ class LearnerDatasetGenerative(Learner):
                 self.scheduler.step()
                 tloss.append(loss.detach().numpy())
                 error = self.functional_generator.errorBatch(output, target)
-                lr = self.optimizer.param_groups[0]['lr']
-                print(f'epoch,batch: {i},{j}, loss: {loss:.3f}, ' +
-                      f'error: {error:.3f}, LR:{lr:.3E}')
                 j += 1
             self.model.eval()
             vloss = []
@@ -151,9 +148,14 @@ class LearnerDatasetGenerative(Learner):
                 error = self.functional_generator.errorBatch(output, target)
                 vloss.append(loss.detach().numpy())
                 verror.append(error.detach().numpy())
-            self.learning_results['error'].append(np.array(verror).mean())
-            self.learning_results['train_loss'].append(np.array(tloss).mean())
-            self.learning_results['valid_loss'].append(np.array(vloss).mean())
+            vloss = np.array(vloss).mean()
+            tloss = np.array(tloss).mean()
+            verror = np.array(verror).mean()
+            self.learning_results['error'].append(verror)
+            self.learning_results['train_loss'].append(tloss)
+            self.learning_results['valid_loss'].append(vloss)
+            print(f'epoch: {i}, tloss: {tloss:.3f}, vloss: {vloss:.3f}, ' +
+                  f'error: {verror:.3f}.')
 
     def plot(self, fnum=1):
         plt.figure(fnum)
