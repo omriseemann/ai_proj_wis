@@ -69,7 +69,7 @@ class FunctionalGenerator:
         return data, T
 
     def plot_examples(self, input_, target, output):
-        '''plot function for the generator, input_ is the data input,
+        '''plot function for the generator, input_ is the batched data input,
         target is real target, output is model output. Gets batch of examples
         '''
         raise NotImplementedError

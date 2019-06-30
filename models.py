@@ -34,6 +34,8 @@ class ModelCNN(torch.nn.Module):
             self.module_list.append(torch.nn.BatchNorm2d(c2))
             self.module_list.append(self.activation)
             self.module_list.append(torch.nn.AdaptiveAvgPool2d((h2, w2)))
+        self.module_list.append(torch.nn.Conv2d(c2, c2, kernel_size=1,
+                                                stride=1, padding=0))
 
     def generate_architecture(self, input_shape, output_shape):
         ''' get the input and output shape tensors and sets achitecture dict
