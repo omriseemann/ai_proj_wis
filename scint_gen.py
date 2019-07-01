@@ -16,7 +16,7 @@ import cv2
 class ScintImageGen(FunctionalGenerator):
 
     def __init__(self, pixel_Nx=2048, pixel_Ny=2048, rbright=50,
-                 max_noise_level=0.5, corr_size=2,
+                 noise_level=(0.1, 0.5), corr_size=2,
                  spot_size_range=(10, 20), distance_factor=(1.5, 3),
                  spot_Nx=80, spot_Ny=80, tan_angle=0.1):
         self.pixel_Nx = pixel_Nx
@@ -29,7 +29,7 @@ class ScintImageGen(FunctionalGenerator):
         data_x, data_y = np.meshgrid(range(pixel_Nx), range(pixel_Ny))
         self.data_x = data_x
         self.data_y = data_y
-        self.max_noise_level = max_noise_level
+        self.noise_level = noise_level
         noise_map = np.abs(np.random.randn(
                 2*pixel_Nx // corr_size,
                 2*pixel_Ny // corr_size))
@@ -65,6 +65,9 @@ class ScintImageGen(FunctionalGenerator):
         noise_iy = np.random.randint(0, self.pixel_Ny-1)
         noise_map = self.noise_map[noise_ix:noise_ix+self.pixel_Nx,
                                    noise_iy:noise_iy+self.pixel_Ny]
+        noise_level = self.noise_level[0] + (
+                self.noise_level[1] - self.noise_level[0]) * np.random.rand()
+        noise_map = noise_map * noise_level
         for i in range(self.spot_Nx):
             for j in range(self.spot_Ny):
                 x = center_x + ((i - self.spot_Nx // 2) +
@@ -72,16 +75,17 @@ class ScintImageGen(FunctionalGenerator):
                                 tan_angle1) * distance1
                 y = center_y + ((i - self.spot_Nx // 2) * tan_angle2 +
                                 (j - self.spot_Ny // 2)) * distance2
-                x = round(x - spot_map.shape[0] / 2)
-                y = round(y - spot_map.shape[1] / 2)
+                x = round(x - spot_map.shape[0] / 2) + 1
+                y = round(y - spot_map.shape[1] / 2) + 1
                 if (x < (self.pixel_Nx - spot_map.shape[0])) and (
                         y < (self.pixel_Ny - spot_map.shape[1])) and (
                                 x >= 0) and (
                                         y >= 0):
                     data[x:x+spot_map.shape[0],
                          y:y+spot_map.shape[1]] = spot_map * np.random.rand()
-        target = [center_x/self.pixel_Nx, center_y/self.pixel_Ny, distance1,
-                  distance2, tan_angle1, tan_angle2, spot_size]
+        target = [center_x/self.pixel_Nx, center_y/self.pixel_Ny,
+                  distance1/spot_size, distance2/spot_size, tan_angle1,
+                  tan_angle2, spot_size]
         target = torch.tensor(target)
         target = target.unsqueeze(1)
         target = target.unsqueeze(1)
@@ -110,8 +114,8 @@ class ScintImageGen(FunctionalGenerator):
             o = o.squeeze(1).squeeze(1).detach().numpy()
             center_x = o[0] * self.pixel_Nx
             center_y = o[1] * self.pixel_Ny
-            distance1 = o[2]
-            distance2 = o[3]
+            distance1 = o[2] * o[6]
+            distance2 = o[3] * o[6]
             tan_angle1 = o[4]
             tan_angle2 = o[5]
             xv = []

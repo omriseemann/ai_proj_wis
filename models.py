@@ -41,7 +41,7 @@ class ModelCNN(torch.nn.Module):
         ''' get the input and output shape tensors and sets achitecture dict
         of lists to help build the model.'''
         flag_end = False
-        shape_multiplyer = max(np.round(np.log10(input_shape)))
+        shape_multiplyer = 4
         c, h, w = input_shape[0], input_shape[1], input_shape[2]
         c2, h2, w2 = output_shape[0], output_shape[1], output_shape[2]
         cl, hl, wl = [], [], []
@@ -54,7 +54,7 @@ class ModelCNN(torch.nn.Module):
             if not flag_compress:
                 cm = max(c_before_compress, c2 * shape_multiplyer)
                 if cl[-1]*shape_multiplyer < cm:
-                    cl.append(int(cl[-1]*shape_multiplyer))
+                    cl.append(int(cl[-1]*10))
                 else:
                     cl.append(int(cm))
                     flag_compress = True
@@ -71,7 +71,7 @@ class ModelCNN(torch.nn.Module):
                 wl.append(int(wl[-1]//shape_multiplyer))
             else:
                 wl.append(int(w2))
-            if cl[-2] == c2 and wl[-2] == w2 and hl[-2] == h2:
+            if cl[-2] == c2 and wl[-1] == w2 and hl[-1] == h2:
                 flag_end = True
         self.architecture = {'C': cl, 'H': hl, 'W': wl}
 
