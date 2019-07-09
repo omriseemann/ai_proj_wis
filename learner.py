@@ -16,21 +16,23 @@ from models import ModelCNN
 
 class Learner:
     '''learner interface '''
-    def __init__(self, func_gen, model_class, lr_start=1e-3, lr_ratio=1e-2,
-                 lr_period=1e6):
+    def __init__(self, func_gen, model_class, model_module):
         self.model_class = model_class
+        self.model_module = model_module
         self.functional_generator = func_gen
         self.learning_results = {}
         self.log = []
         self.save_params = {'save_dir': './saved_data', 'name': 'test'}
-        self.reset(lr_start, lr_ratio, lr_period)
+        self.reset(flag_model=True)
 
-    def reset(self, lr_start, lr_ratio, lr_period, flag_model=True):
+    def reset(self,  lr_start=1e-3, lr_ratio=1e-2, lr_period=1e6,
+              flag_model=False):
         '''helper function if you want to tweek learning parameters'''
         if flag_model:
             self.model = self.model_class(
                     self.functional_generator.input_shape,
-                    self.functional_generator.output_shape)
+                    self.functional_generator.output_shape,
+                    self.model_module)
         self.optimizer = torch.optim.Adam(self.model.parameters(),
                                           lr=lr_start)
         self.scheduler = torch.optim.lr_scheduler.LambdaLR(
@@ -99,11 +101,9 @@ class Learner:
 
 class LearnerDatasetGenerative(Learner):
     '''learner class for dataset generated'''
-    def __init__(self, func_gen, model_class, lr_start=1e-3, lr_ratio=1e-2,
-                 lr_period=1e6):
+    def __init__(self, func_gen, model_class, model_module):
         super(LearnerDatasetGenerative, self).__init__(func_gen, model_class,
-                                                       lr_start, lr_ratio,
-                                                       lr_period)
+                                                       model_module)
         self.learning_results = {'train_loss': [], 'valid_loss': [],
                                  'error': []}
         self.datasets = {'train': None, 'valid': None}
@@ -181,10 +181,9 @@ class LearnerDatasetGenerative(Learner):
 class LearnerGenerative(Learner):
     '''learner class to help with learning procedure, save data and plots
     results'''
-    def __init__(self, func_gen, model_class, lr_start=1e-3, lr_ratio=1e-2,
-                 lr_period=1e6):
+    def __init__(self, func_gen, model_class, model_module):
         super(LearnerGenerative, self).__init__(func_gen, model_class,
-                                                lr_start, lr_ratio, lr_period)
+                                                model_module)
         self.learning_results = {'loss': [], 'error': []}
 
     def learn(self, n_batches=100, batch_size=10):
@@ -219,7 +218,8 @@ class LearnerGenerative(Learner):
 
 if __name__ == '__main__':
     learner = LearnerGenerative(capcha_gen.CaptchaGenOSFixed(), ModelCNN)
-    learner.save_params['name'] = 'try_after_arch'
+    learner.save_params['name'] = 'try2'
     learner.load()
-    learner.learn(500, 200)
+    learner.learn(1000, 100)
+    learner.save()
     learner.plot()

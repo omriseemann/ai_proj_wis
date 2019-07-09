@@ -7,14 +7,57 @@ Created on Thu Jun 20 08:15:14 2019
 """
 
 import torch
-import numpy as np
+
+
+class ResModule(torch.nn.Module):
+    ''' Module of inception '''
+    def __init__(self,  ci, co, hi, hf, wi, wf):
+        super(ResModule, self).__init__()
+        self.module_list = torch.nn.ModuleList()
+        self.module_list.append(CNNModule(ci, co, hi, hf, wi, wf))
+        self.module_list.append(torch.nn.Conv2d(co, co, kernel_size=3,
+                                                stride=1, padding=1))
+        self.module_list.append(torch.nn.LeakyReLU())  # activation
+        self.module_res = CNNModule(ci, co, hi, hf, wi, wf)
+
+    def forward(self, x):
+        x1 = x
+        for m in self.module_list:
+            x = m(x)
+        x += self.module_res(x1)
+        return x
+
+
+class CNNModule(torch.nn.Module):
+    ''' Module of Fully connected CNN '''
+    def __init__(self, ci, co, hi, hf, wi, wf):
+        super(CNNModule, self).__init__()
+        self.module_list = torch.nn.ModuleList()
+        if hi//2 >= hf:
+            s1 = 2
+        else:
+            s1 = 1
+        if wi//2 >= wf:
+            s2 = 2
+        else:
+            s2 = 1
+        s = (s1, s2)
+        self.module_list.append(torch.nn.Conv2d(ci, co, kernel_size=3,
+                                                stride=s, padding=1))
+        self.module_list.append(torch.nn.BatchNorm2d(co))
+        self.module_list.append(torch.nn.LeakyReLU())  # activation
+
+    def forward(self, x):
+        for m in self.module_list:
+            x = m(x)
+        return x
 
 
 class ModelCNN(torch.nn.Module):
     '''Cnn generic model, morphs input tensor C*H*W into output tensor
     C2*H2*W2'''
 
-    def __init__(self, input_shape, output_shape):
+    def __init__(self, input_shape, output_shape, model_module):
         '''Gets input_shape of tensor and output_shape of tensor (not batches).
         Builds the model by stacking conv2d, batchnorm2d, leakyrelu and
         adaptive average pooling 2d.'''
@@ -26,22 +69,17 @@ class ModelCNN(torch.nn.Module):
         hl = self.architecture['H']
         wl = self.architecture['W']
         for i in range(len(cl)-1):
-            c1, c2 = cl[i], cl[i+1]
-            w2 = wl[i+1]
-            h2 = hl[i+1]
-            self.module_list.append(torch.nn.Conv2d(c1, c2, kernel_size=3,
-                                                    stride=1, padding=1))
-            self.module_list.append(torch.nn.BatchNorm2d(c2))
-            self.module_list.append(self.activation)
-            self.module_list.append(torch.nn.AdaptiveAvgPool2d((h2, w2)))
-        self.module_list.append(torch.nn.Conv2d(c2, c2, kernel_size=1,
+            self.module_list.append(model_module(cl[i], cl[i+1], hl[i], hl[-1],
+                                                 wl[i], wl[-1]))
+        self.module_list.append(torch.nn.AdaptiveAvgPool2d((hl[-1], wl[-1])))
+        self.module_list.append(torch.nn.Conv2d(cl[-1], cl[-1], kernel_size=1,
                                                 stride=1, padding=0))
 
     def generate_architecture(self, input_shape, output_shape):
         ''' get the input and output shape tensors and sets achitecture dict
         of lists to help build the model.'''
         flag_end = False
-        shape_multiplyer = 4
+        shape_multiplyer = 2
         c, h, w = input_shape[0], input_shape[1], input_shape[2]
         c2, h2, w2 = output_shape[0], output_shape[1], output_shape[2]
         cl, hl, wl = [], [], []
@@ -53,7 +91,7 @@ class ModelCNN(torch.nn.Module):
         while not flag_end:
             if not flag_compress:
                 cm = max(c_before_compress, c2 * shape_multiplyer)
-                if cl[-1]*shape_multiplyer < cm:
+                if cl[-1]*10 < cm:
                     cl.append(int(cl[-1]*10))
                 else:
                     cl.append(int(cm))
