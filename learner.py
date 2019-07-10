@@ -88,8 +88,12 @@ class Learner:
             save_dir = self.save_params['save_dir']
             lpath = os.path.join(save_dir, name)
             lpath = os.path.realpath(lpath)
-        data = torch.load(lpath)
-        self.to_self(data)
+        try:
+            data = torch.load(lpath)
+            self.to_self(data)
+        except FileNotFoundError:
+            self.save()
+            data = torch.load(lpath)
         return data
 
     def plot_examples(self, n_examples=9):

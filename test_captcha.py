@@ -15,9 +15,10 @@ if __name__ == '__main__':
     I, t = gen.generateBatch(2)
     a = gen.lossBatch(t, t)
     learner = LearnerGenerative(gen, ModelCNN, ResModule)
-    learner.save_params['name'] = 'try2'
+    learner.save_params['name'] = 'try3'
+    learner.reset(lr_start=1e-2)
     learner.load()
     o = learner.model(I)
-    learner.learn(1000, 10)
+    learner.learn(100, 100)
     learner.save()
     learner.plot()
