@@ -11,12 +11,12 @@ import capcha_gen
 import numpy as np
 import matplotlib.pyplot as plt
 import os
-from models import ModelCNN
+from models import Model
 
 
 class Learner:
     '''learner interface '''
-    def __init__(self, func_gen, model_class, model_module):
+    def __init__(self, func_gen, model_module):
         self.model_class = model_class
         self.model_module = model_module
         self.functional_generator = func_gen

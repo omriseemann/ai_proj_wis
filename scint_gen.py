@@ -27,8 +27,8 @@ class ScintImageGen(FunctionalGenerator):
         self.spot_Ny = spot_Ny
         self.distance_factor = distance_factor
         data_x, data_y = np.meshgrid(range(pixel_Nx), range(pixel_Ny))
-        self.data_x = data_x
-        self.data_y = data_y
+        self.data_x = torch.FloatTensor(data_x)
+        self.data_y = torch.FloatTensor(data_y)
         self.noise_level = noise_level
         noise_map = np.abs(np.random.randn(
                 2*pixel_Nx // corr_size,
@@ -68,6 +68,7 @@ class ScintImageGen(FunctionalGenerator):
         noise_level = self.noise_level[0] + (
                 self.noise_level[1] - self.noise_level[0]) * np.random.rand()
         noise_map = noise_map * noise_level
+        target = torch.tensor(np.zeros((3, self.spot_Nx, self.spot_Ny)))
         for i in range(self.spot_Nx):
             for j in range(self.spot_Ny):
                 x = center_x + ((i - self.spot_Nx // 2) +
@@ -83,14 +84,15 @@ class ScintImageGen(FunctionalGenerator):
                                         y >= 0):
                     data[x:x+spot_map.shape[0],
                          y:y+spot_map.shape[1]] = spot_map * np.random.rand()
-        target = [center_x/self.pixel_Nx, center_y/self.pixel_Ny,
-                  distance1/spot_size, distance2/spot_size, tan_angle1,
-                  tan_angle2, spot_size]
-        target = torch.tensor(target)
-        target = target.unsqueeze(1)
-        target = target.unsqueeze(1)
+                    target[0, i, j] = x + spot_map.shape[0]//2 - 1
+                    target[1, i, j] = y + spot_map.shape[1]//2 - 1
+                    target[2, i, j] = 1
         data = torch.FloatTensor(data)
         data += noise_map.float()
+        '''
+        data = torch.cat((data.unsqueeze(0), self.data_x.unsqueeze(0),
+                          self.data_y.unsqueeze(0)))
+        '''
         data = data.unsqueeze(0)
         return data.float(), target.float()
 
@@ -102,33 +104,23 @@ class ScintImageGen(FunctionalGenerator):
         return loss
 
     def error(self, output, target):
-        loss = (target-output) / target
+        loss = (target-output)
+        loss = loss[0:1, :, :]
         return loss.abs().mean()
 
     def plot_examples(self, _input, target, output):
         k = 0
-        for im, o, t in zip(_input, output, target):
+        for im, t, o in zip(_input, target, output):
             k += 1
             plt.figure(k)
             plt.imshow(im[0])
-            o = o.squeeze(1).squeeze(1).detach().numpy()
-            center_x = o[0] * self.pixel_Nx
-            center_y = o[1] * self.pixel_Ny
-            distance1 = o[2] * o[6]
-            distance2 = o[3] * o[6]
-            tan_angle1 = o[4]
-            tan_angle2 = o[5]
             xv = []
             yv = []
             for i in range(self.spot_Nx):
                 for j in range(self.spot_Ny):
-                    x = center_x + ((i - self.spot_Nx // 2) +
-                                    (j - self.spot_Ny // 2) *
-                                    tan_angle1) * distance1
-                    y = center_y + ((i - self.spot_Nx // 2) * tan_angle2 +
-                                    (j - self.spot_Ny // 2)) * distance2
-                    if (x < self.pixel_Nx) and (y < self.pixel_Ny) and (
-                            x >= 0) and (y >= 0):
+                    x = o[0, i, j]
+                    y = o[1, i, j]
+                    if o[2, i, j] > 0:
                         xv.append(x)
                         yv.append(y)
             plt.plot(yv, xv, '+y')

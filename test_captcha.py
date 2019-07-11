@@ -19,6 +19,6 @@ if __name__ == '__main__':
     learner.reset(lr_start=1e-2)
     learner.load()
     o = learner.model(I)
-    learner.learn(100, 100)
+    learner.learn(1000, 100)
     learner.save()
     learner.plot()
