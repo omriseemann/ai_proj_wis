@@ -20,6 +20,6 @@ if __name__ == '__main__':
     learner.save_params['name'] = 'scint_test'
     learner.load()
     o = learner.model(I)
-    learner.learn(100, 10)
+    learner.learn(500, 50)
     learner.save()
     learner.plot()

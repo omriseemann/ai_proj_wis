@@ -11,12 +11,12 @@ import capcha_gen
 import numpy as np
 import matplotlib.pyplot as plt
 import os
-from models import Model
+from models import GenModel, ResModule
 
 
 class Learner:
     '''learner interface '''
-    def __init__(self, func_gen, model_module):
+    def __init__(self, func_gen, model_module, model_class=GenModel):
         self.model_class = model_class
         self.model_module = model_module
         self.functional_generator = func_gen
@@ -185,9 +185,9 @@ class LearnerDatasetGenerative(Learner):
 class LearnerGenerative(Learner):
     '''learner class to help with learning procedure, save data and plots
     results'''
-    def __init__(self, func_gen, model_class, model_module):
-        super(LearnerGenerative, self).__init__(func_gen, model_class,
-                                                model_module)
+    def __init__(self, func_gen, model_module, model_class=GenModel):
+        super(LearnerGenerative, self).__init__(func_gen, model_module,
+                                                model_class)
         self.learning_results = {'loss': [], 'error': []}
 
     def learn(self, n_batches=100, batch_size=10):
@@ -221,9 +221,8 @@ class LearnerGenerative(Learner):
 
 
 if __name__ == '__main__':
-    learner = LearnerGenerative(capcha_gen.CaptchaGenOSFixed(), ModelCNN)
-    learner.save_params['name'] = 'try2'
-    learner.load()
-    learner.learn(1000, 100)
+    learner = LearnerGenerative(capcha_gen.CaptchaGenOSFixed(), ResModule)
+    learner.save_params['name'] = 'test'
+    learner.learn(100, 10)
     learner.save()
     learner.plot()

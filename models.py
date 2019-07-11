@@ -21,13 +21,18 @@ class ResModule(torch.nn.Module):
         self.module_list.append(torch.nn.Conv2d(co, co, kernel_size=3,
                                                 stride=1, padding=1))
         self.module_list.append(torch.nn.LeakyReLU())  # activation
-        self.module_res = CNNModule(ci, co, hi, ho, wi, wo)
+        self.module_res = torch.nn.ModuleList()
+        self.module_res.append(torch.nn.Conv2d(ci, co, kernel_size=3,
+                                               stride=1, padding=1))
+        self.module_res.append(torch.nn.AdaptiveAvgPool2d((ho, wo)))
 
     def forward(self, x):
         x1 = x
+        for m in self.module_res:
+            x1 = m(x1)
         for m in self.module_list:
             x = m(x)
-        x += self.module_res(x1)
+        x += x1
         return x
 
 
@@ -38,7 +43,7 @@ class CNNModule(torch.nn.Module):
         self.module_list = torch.nn.ModuleList()
         self.module_list.append(torch.nn.Conv2d(ci, co, kernel_size=3,
                                                 stride=1, padding=1))
-        self.module_list.append(torch.nn.AdaptiveAvgPool2d(ho, wo))
+        self.module_list.append(torch.nn.AdaptiveAvgPool2d((ho, wo)))
         self.module_list.append(torch.nn.BatchNorm2d(co))
         self.module_list.append(torch.nn.LeakyReLU())  # activation
 
@@ -48,7 +53,7 @@ class CNNModule(torch.nn.Module):
         return x
 
 
-class Model(torch.nn.Module):
+class GenModel(torch.nn.Module):
     '''Cnn generic model, morphs input tensor C*H*W into output tensor
     C2*H2*W2'''
 
@@ -56,8 +61,7 @@ class Model(torch.nn.Module):
         '''Gets input_shape of tensor and output_shape of tensor (not batches).
         Builds the model by stacking conv2d, batchnorm2d, leakyrelu and
         adaptive average pooling 2d.'''
-        super(Model, self).__init__()
-        self.activation = torch.nn.LeakyReLU()
+        super(GenModel, self).__init__()
         self.module_list = torch.nn.ModuleList()
         self.generate_architecture(input_shape, output_shape)
         cl = self.architecture['C']
