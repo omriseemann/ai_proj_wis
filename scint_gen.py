@@ -150,7 +150,6 @@ class ScintImageGen(FunctionalGenerator):
             plt.imshow(im[0])
             xv = self.data_x.numpy()[torch.softmax(o, 0).detach().numpy()[1] > 0.5]
             yv = self.data_y.numpy()[torch.softmax(o, 0).detach().numpy()[1] > 0.5]
-            '''
             cx = o[0]
             cy = o[1]
             d1 = o[2]
