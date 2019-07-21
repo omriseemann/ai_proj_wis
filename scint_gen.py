@@ -120,9 +120,6 @@ class ScintImageGen(FunctionalGenerator):
                     y = y+spot_map.shape[1]//2
                     target[1, x-3:x+2, y-3:y+2] = 1
                     target[0, x-3:x+2, y-3:y+2] = 0
-        '''target = torch.tensor([center_x, center_y, distance1, distance2,
-                               tan_angle1*distance1, tan_angle2*distance2,
-                               spot_size])'''
         data = torch.FloatTensor(data)
         data += noise_map.float()
         data = data.unsqueeze(0)
