@@ -107,7 +107,7 @@ class GenModel(torch.nn.Module):
                 wl.append(int(wl[-1]//shape_multiplyer))
             else:
                 wl.append(int(w2))
-            if cl[-2] == c2 and wl[-1] == w2 and hl[-1] == h2:
+            if cl[-2] == c2 and wl[-1] == w2 and hl[-1] == h2 and len(cl) > 2:
                 flag_end = True
         self.architecture = {'C': cl, 'H': hl, 'W': wl}
 

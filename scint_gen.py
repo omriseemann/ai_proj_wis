@@ -9,8 +9,27 @@ Created on Tue Jun 18 09:46:12 2019
 import torch
 import numpy as np
 import matplotlib.pyplot as plt
+import torchvision as tv
 from functional_gen import FunctionalGenerator
 import cv2
+
+
+def analyzeIm(im, model):
+    tim = torch.tensor(im)
+    tim2 = tim.reshape(64, 256, 256)
+    k = 0
+    for i in range(8):
+        for j in range(8):
+            tim2[k, :, :] = tim[i*256:(i+1)*256, j*256:(j+1)*256]
+            k += 1
+    out = model(tim2.unsqueeze(1))
+    out2 = tim*0
+    k = 0
+    for i in range(8):
+        for j in range(8):
+            out2[i*256:(i+1)*256, j*256:(j+1)*256] = out[k, :, :]
+            k += 1
+    return out2
 
 
 class ScintImageGen(FunctionalGenerator):
@@ -41,9 +60,16 @@ class ScintImageGen(FunctionalGenerator):
         self.input_shape = image.shape
         self.output_shape = t.shape
 
+    def normt(self, im_tensor):
+        data = im_tensor - im_tensor.mean()
+        data = data / data.std()
+        return data
+
     def generateImage(self, params=None):
         tan_angle1 = (2*np.random.rand()-1)*self.tan_angle
         tan_angle2 = (2*np.random.rand()-1)*self.tan_angle
+        ki = np.random.rand()*self.spot_Nx*10*2*3.14
+        kj = np.random.rand()*self.spot_Ny*10*2*3.14
         center_x = (0.5 + 0.25 * (np.random.rand()-0.5)) * self.pixel_Nx
         center_y = (0.5 + 0.25 * (np.random.rand()-0.5)) * self.pixel_Ny
         spot_size = self.spot_size_range[0] + np.random.rand() * (
@@ -68,6 +94,8 @@ class ScintImageGen(FunctionalGenerator):
         noise_level = self.noise_level[0] + (
                 self.noise_level[1] - self.noise_level[0]) * np.random.rand()
         noise_map = noise_map * noise_level
+        target = torch.zeros((2, self.pixel_Nx, self.pixel_Ny))
+        target[0, :, :] = 1
         for i in range(self.spot_Nx):
             for j in range(self.spot_Ny):
                 x = center_x + ((i - self.spot_Nx // 2) +
@@ -81,27 +109,41 @@ class ScintImageGen(FunctionalGenerator):
                         y < (self.pixel_Ny - spot_map.shape[1])) and (
                                 x >= 0) and (
                                         y >= 0):
-                    data[x:x+spot_map.shape[0],
-                         y:y+spot_map.shape[1]] = spot_map * np.random.rand()
-        target = torch.tensor([center_x, center_y, distance1, distance2,
+                    if np.random.rand() > 0.5:
+                        data[x:x+spot_map.shape[0],
+                             y:y+spot_map.shape[1]] = spot_map * np.random.rand()
+                    else:
+                        data[x:x+spot_map.shape[0],
+                             y:y+spot_map.shape[1]] = spot_map * np.abs(
+                             np.sin(ki*i+kj*j))
+                    x = x+spot_map.shape[0]//2
+                    y = y+spot_map.shape[1]//2
+                    target[1, x-3:x+2, y-3:y+2] = 1
+                    target[0, x-3:x+2, y-3:y+2] = 0
+        '''target = torch.tensor([center_x, center_y, distance1, distance2,
                                tan_angle1*distance1, tan_angle2*distance2,
-                               spot_size])
-        target = target.unsqueeze(-1).unsqueeze(-1)
+                               spot_size])'''
         data = torch.FloatTensor(data)
         data += noise_map.float()
         data = data.unsqueeze(0)
+        data = self.normt(data)
         return data.float(), target.float()
 
     def loss(self, output, target):
         '''loss function, must be implemented, returns valid pytorch loss class
         This can be achived using torch.nn.functional'''
-        lossf = torch.nn.L1Loss()
-        loss = lossf(output, target)
-        return loss
+        o = output
+        t = target
+        o = torch.softmax(o, 0)
+        cin = (o[1]*t[1]).sum()
+        cun = o[1]+t[1] - (o[1]*t[1])
+        cun = cun.sum()
+        smooth = 1e-6
+        iou = (cin+smooth)/(cun+smooth)
+        return 1-iou
 
     def error(self, output, target):
-        loss = (target-output)/(target+output)
-        return loss.abs().mean()
+        return torch.tensor(1.)
 
     def plot_examples(self, _input, target, output):
         k = 0
@@ -109,6 +151,9 @@ class ScintImageGen(FunctionalGenerator):
             k += 1
             plt.figure(k)
             plt.imshow(im[0])
+            xv = self.data_x.numpy()[torch.softmax(o, 0).detach().numpy()[1] > 0.5]
+            yv = self.data_y.numpy()[torch.softmax(o, 0).detach().numpy()[1] > 0.5]
+            '''
             cx = o[0]
             cy = o[1]
             d1 = o[2]
@@ -127,7 +172,8 @@ class ScintImageGen(FunctionalGenerator):
                                 x >= 0) and (y >= 0):
                         xv.append(x)
                         yv.append(y)
-            plt.plot(yv, xv, '+y')
+                        '''
+            plt.plot(xv, yv, '+y')
 
 
 if __name__ == "__main__":
