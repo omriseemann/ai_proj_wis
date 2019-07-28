@@ -16,7 +16,7 @@ class FunctionalGenerator:
         self.input_shape = None
         self.output_shape = None
 
-    def generateImage(self):
+    def generateImage(self, Target=None):
         ''' generates an Image as a tensor, returns target as well, must be
         implemented
         Image is tensor of type C1*H*W
@@ -55,13 +55,16 @@ class FunctionalGenerator:
             L.append(loss)
         return torch.cat(L).mean()
 
-    def generateBatch(self, n):
+    def generateBatch(self, n, targets=None):
         '''generate batch of images and a list of targets
         batch index is first'''
         T = []
         data = []
         for i in range(n):
-            d, t = self.generateImage()
+            if targets is not None:
+                d, t = self.generateImage(targets[i])
+            else:
+                d, t = self.generateImage()
             data.append(d.unsqueeze(0))
             T.append(t.unsqueeze(0))
         data = torch.cat(data)

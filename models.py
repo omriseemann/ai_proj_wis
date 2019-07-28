@@ -35,6 +35,19 @@ class ResModule(torch.nn.Module):
         x += x1
         return x
 
+    def reset_parameters(self):
+        for m in self.module_list:
+            try:
+                m.reset_parameters()
+            except AttributeError:
+                pass
+
+        for m in self.module_res:
+            try:
+                m.reset_parameters()
+            except AttributeError:
+                pass
+
 
 class CNNModule(torch.nn.Module):
     ''' Module of Fully connected CNN '''
@@ -52,12 +65,46 @@ class CNNModule(torch.nn.Module):
             x = m(x)
         return x
 
+    def reset_parameters(self):
+        for m in self.module_list:
+            try:
+                m.reset_parameters()
+            except AttributeError:
+                pass
+
+
+class SamplerModel(torch.nn.Module):
+    '''sampler model'''
+    def __init__(self, output_shape):
+        super(SamplerModel, self).__init__()
+        os = output_shape
+        self.output_shape = output_shape
+        self.model = ResModule(os[0], os[0], os[1], os[1], os[2], os[2])
+
+    def generate(self, n):
+        os = self.output_shape
+        x = torch.randn((n, os[0], os[1], os[2]))
+        return x
+
+    def reverse_grad(self):
+        for p in self.parameters():
+            if p.grad is not None:
+                p.grad = -p.grad
+
+    def forward(self, x):
+        x = self.model(x)
+        return x
+
+    def reset_parameters(self):
+        self.model.reset_parameters()
+
 
 class GenModel(torch.nn.Module):
     '''Cnn generic model, morphs input tensor C*H*W into output tensor
     C2*H2*W2'''
 
-    def __init__(self, input_shape, output_shape, model_module):
+    def __init__(self, input_shape, output_shape, model_module,
+                 flag_reversed=False):
         '''Gets input_shape of tensor and output_shape of tensor (not batches).
         Builds the model by stacking conv2d, batchnorm2d, leakyrelu and
         adaptive average pooling 2d.'''
@@ -67,11 +114,19 @@ class GenModel(torch.nn.Module):
         cl = self.architecture['C']
         hl = self.architecture['H']
         wl = self.architecture['W']
-        for i in range(len(cl)-1):
+        for k in range(len(cl)-1):
+            if flag_reversed:
+                i = len(cl)-1 - k
+            else:
+                i = k
             self.module_list.append(model_module(cl[i], cl[i+1], hl[i],
                                                  hl[i+1], wl[i], wl[i+1]))
-        self.module_list.append(torch.nn.AdaptiveAvgPool2d((hl[-1], wl[-1])))
-        self.module_list.append(torch.nn.Conv2d(cl[-1], cl[-1], kernel_size=1,
+        if flag_reversed:
+            i = 0
+        else:
+            i = -1
+        self.module_list.append(torch.nn.AdaptiveAvgPool2d((hl[i], wl[i])))
+        self.module_list.append(torch.nn.Conv2d(cl[i], cl[i], kernel_size=1,
                                                 stride=1, padding=0))
 
     def generate_architecture(self, input_shape, output_shape):
@@ -116,6 +171,16 @@ class GenModel(torch.nn.Module):
             x = m(x)
         return x
 
+    def reset_parameters(self):
+        for m in self.module_list:
+            try:
+                m.reset_parameters()
+            except AttributeError:
+                pass
+
 
 if __name__ == '__main__':
-    pass
+    m = ResModule(1, 10, 10, 10, 10, 10)
+    s = SamplerModel((10, 1, 10))
+    x = s.generate(5)
+    o = s(x)

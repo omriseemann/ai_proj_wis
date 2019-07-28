@@ -50,12 +50,23 @@ class CaptchaGenOSFixed(FunctionalGenerator):
                 s += self.num_to_char[k]
         return s
 
-    def generateImage(self):
+    def generateImage(self, Target=None):
         '''implimantation of FunctionalGenerator, check it for detail'''
-        s = self.generateRandomString()
+        if Target is not None:
+            s = self.tensor_to_string(Target)
+            t = Target
+            ind = t.argmax(0)
+            t = torch.zeros(t.shape)
+            for k in range(ind.shape[0]):
+                for j in range(ind.shape[1]):
+                    t[ind[k, j], k, j] = 1
+            s = self.tensor_to_string(t)
+            t = (Target**10).softmax(0)
+        else:
+            s = self.generateRandomString()
+            t = self.string_to_tensor(s)
         Im = self.generator.generate_image(s)
         Im = self.transforms(Im)
-        t = self.string_to_tensor(s)
         return Im, t
 
     def string_to_index_list(self, s):
